@@ -1,0 +1,5 @@
+public class WAMServer {
+    public static void main(String[] args) {
+	
+    }
+}

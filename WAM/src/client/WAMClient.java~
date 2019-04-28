@@ -1,0 +1,99 @@
+package WAM.client;
+
+import java.io.PrintStream;
+import java.net.Socket;
+import java.util.Scanner;
+
+import WAM.common.WAMProtocol;
+
+public class WAMClient {
+
+    private WAM.common.gameState board; //gameState taken from GUI, modified here
+    private Socket clientSocket; //
+    private PrintStream user; //sends client responses
+    private Scanner server; //reads server requests
+    
+    public WAMClient (String host, int port, WAM.common.gameState board) {
+	try {
+	    this.board = board;
+	    this.clientSocket = new socket(host, port);
+	    this.user = new PrintStream(clientSocket.getOutputStream());
+	    this.server = new Scanner(clientSocket.getInputStream());
+	    String request = server.next();
+	    if (!request.equals(WAM.common.WAMProtocol.WELCOME)) {
+		throw new Exception("Expected CONNECT from server");
+	    }
+	    this.dPrint("Connected to server " + this.clientSocket);
+	    int row = server.nextInt();
+	    int col = server.nextInt();
+	    int tot = server.nextInt();
+	    int you = server.nextInt();
+	    this.board.setParams(row, col, tot, you);
+	}
+	catch(IOException e) {
+	    throw e;
+	}
+    }
+
+    public void startListener() {
+        new Thread(() -> this.run()).start();
+    }
+
+    public void moleChange(String args) { //used for both MOLE_UP and MOLE_DOWN since the logic of the game keeps them from interfering with one another
+	board.modifyMod(Character.getNumericValue(args));
+    }
+    public void scoreChange(String args) {
+	board.scoreChange(Character.getNumericValue(args));
+    }
+    public void gameWon() {
+	
+    }
+    public void gameLost() {
+	
+    }
+    public void gameTied() {
+
+    }
+    public void throwError() {
+	
+    }
+
+    private void run() {
+	try {
+	    String request = server.next();
+	    String args = server.nextLine();
+
+	    switch (request) {
+	    case MOLE_UP:
+		moleChange(args);
+		break;
+	    case MOLE_DOWN:
+		moleChange(args);
+		break;
+	    case SCORE:
+		scoreChange(args);
+		break;
+	    case GAME_WON:
+		gameWon();
+		break;
+	    case GAME_LOST:
+		gameLost();
+		break;
+	    case GAME_TIED:
+		gameTied();
+		break;
+	    case ERROR:
+		throwError();
+		break;
+	    }
+	}
+	catch( NoSuchElementException nse ) {
+	    this.error( "Lost connection to server." );
+	    this.stop();
+	}
+	catch( Exception e ) {
+	    this.error( e.getMessage() + '?' );
+	    this.stop();
+	}
+    }
+}
