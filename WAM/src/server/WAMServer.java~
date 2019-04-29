@@ -1,0 +1,84 @@
+public class WAMServer {
+
+    private int[] scores;
+    private int[] board;
+    private ServerSocket socket;
+    private clientState[] clients;
+    
+    
+    public WAMServer(String[] args) {
+	String[] split = args.split(" ");
+	socket = new ServerSocket(Character.getNumericValue(split[0]));
+	clients = new clientState[Character.getNumericValue(split[3])];
+	scores = new int[Character.getNumericValue(split[3])];
+	board = new int[Character.getNumericValue(split[1]) * Character.getNumericValue(split[2])];	
+	for (int i = 0; i < scores.length; i++) {
+	    clients[i] = new clientState(i, socket.accept(); this);
+	}
+	
+    }
+    
+    public void checkMole(int mole, int player) {
+	if (board[mole] == 1) {
+	    board[mole] = ThreadLocalRandom.current().nextInt(3, 10) * -1; //sets the mole to pop up after a random amount of seconds from 3 to 9
+	    moleDown(mole);
+	    scoreChange(player, 20);
+	}
+	else {
+	    scoreChange(player, -5);
+	}
+    }
+
+    public void scoreChange(int player, int amt) {
+	clients[player].changeScore(amt);
+    }
+
+    public void moleDown(int mole) {
+	for (int i = 0; i < clients.length; i++) {
+	    clients[i].moleDown(mole);
+	}
+    }
+    public void moleUp(int mole) {
+	for (int i = 0; i < clients.length; i++) {
+	    clients[i].moleDown(mole);
+	}
+    }
+    public static void main(String[] args) {
+	if (args.length != 5) {
+            System.out.println("Usage: java WAMServer <port> <rows> <cols> <num_players> <runtime>");
+            System.exit(1);
+        }
+	WAMServer server = new WAMServer(args);
+	server.start();
+    }
+    
+}
+
+
+public class clientState {
+    private WAMServer server;
+    private int player;
+    private Socket client;
+    private Scanner reciever;
+    private PrintStream toClient;
+
+    public clientState(int player, Socket socket, WAMServer server) {
+	this.player = player;
+	this.client = socket;
+	this.server = server;
+	this.reciever = new Scanner(client.getOutputStream());
+	this.toClient = new PrintStream(client.getInputStream());
+    }
+
+    public boolean whackRecieved() {
+	return reciever.hasNextLine();
+    }
+
+    public void moleWhacked() {
+	String request = reciever.next();
+	int mole = reciever.nextInt();
+	int player = receiver.nextInt();
+
+	server.checkMole(mole, player);
+    }
+}
