@@ -1,0 +1,115 @@
+package WAM.client;
+
+import java.io.PrintStream;
+import java.net.Socket;
+import java.util.Scanner;
+import java.io.IOException;
+import java.util.NoSuchElementException;
+
+import WAM.common.GameState;
+
+public class WAMClient {
+
+    private WAM.common.GameState board; //GameState taken from GUI, modified here
+    private Socket clientSocket; //
+    private PrintStream user; //sends client responses
+    private Scanner server; //reads server requests
+    
+    public WAMClient (String host, int port, GameState board) {
+	try {
+	    this.board = board;
+	    this.clientSocket = new Socket(host, port);
+	    this.user = new PrintStream(clientSocket.getOutputStream());
+	    this.server = new Scanner(clientSocket.getInputStream());
+	    String request = server.next();
+	    if (!request.equals("WELCOME")) {
+		System.out.println("Expected CONNECT from server");
+	    }
+	    System.out.println("Connected to server " + this.clientSocket);
+	    int row = server.nextInt();
+	    int col = server.nextInt();
+	    int tot = server.nextInt();
+	    int you = server.nextInt();
+	    this.board.setParams(row, col, tot, you);
+	}
+	catch(IOException e) {
+	    System.out.println("IOException");
+	}
+    }
+
+    public void startListener() {
+        new Thread(() -> this.run()).start();
+    }
+    public void moleWhacked(int mole) {
+	this.user.println("WHACK" + " " + mole); //sends message to server that user whacked mole 'mole'
+    }
+    public void moleChange(String args) { //used for both MOLE_UP and MOLE_DOWN since the logic of the game keeps them from interfering with one another
+	board.modifyMod(Character.getNumericValue(args.charAt(0)));
+    }
+    public void scoreChange(String args) {
+	board.scoreChange(Character.getNumericValue(args.charAt(0)));
+    }
+    public void gameWon() {
+	board.endGame(1); //signifies win condition
+    }
+    public void gameLost() {
+	board.endGame(-1); //signifies loss condition
+    }
+    public void gameTied() {
+	board.endGame(0); //signifies tie condition
+    }
+    public void throwError() {
+	board.endGame(-2); //signifies error end condition
+    }
+
+    private void run() {
+	try {
+	    String request = server.next();
+	    String args = server.nextLine();
+
+	    switch (request) {
+	    case "MOLE_UP":
+		moleChange(args);
+		break;
+	    case "MOLE_DOWN":
+		moleChange(args);
+		break;
+	    case "SCORE":
+		scoreChange(args);
+		break;
+	    case "GAME_WON":
+		gameWon();
+		this.close();
+		break;
+	    case "GAME_LOST":
+		gameLost();
+		this.close();
+		break;
+	    case "GAME_TIED":
+		gameTied();
+		this.close();
+		break;
+	    case "ERROR":
+		throwError();
+		this.close();
+		break;
+	    }
+	}
+	catch( NoSuchElementException nse ) {
+	    System.out.println("No element");
+	    this.close();
+	}
+	catch( Exception e ) {
+	    System.out.println("err0r");
+	    this.close();
+	}
+    }
+    public void close () {
+	try {
+	    clientSocket.close();
+	}
+	catch (IOException e) {
+
+	}
+    }
+}
